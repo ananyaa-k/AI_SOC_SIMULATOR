@@ -1,0 +1,38 @@
+# --- environment / secrets ---
+.env
+.env.local
+*.key
+*.pem
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- node / frontend ---
+node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# --- generated data (keep dirs, ignore contents) ---
+data/logs/*
+!data/logs/.gitkeep
+data/vectorstore/
+data/incidents/generated/
+
+# --- editors / os ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- logs ---
+*.log
