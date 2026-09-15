@@ -344,6 +344,16 @@ def generate_scenario(scenario: str, seed: int | None = None) -> list[SecurityLo
     return sorted(logs, key=lambda e: e.timestamp)
 
 
+def generate_benign(seed: int | None = None, count: int = 20) -> list[SecurityLog]:
+    """Generate a fully benign log stream (no malicious events).
+
+    Used by false-positive tests: a healthy detector must return zero
+    detections for this stream.
+    """
+    rng = random.Random(seed if seed is not None else _default_seed("benign"))
+    return sorted(_benign_baseline(rng, 0, count, "benign"), key=lambda e: e.timestamp)
+
+
 def generate_all(seed: int | None = None) -> dict[str, list[SecurityLog]]:
     """Generate every scenario; useful for sample data / evaluation fixtures."""
     return {name: generate_scenario(name, seed=seed) for name in SCENARIOS}

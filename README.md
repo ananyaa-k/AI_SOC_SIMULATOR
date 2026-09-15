@@ -14,6 +14,8 @@ LLM never replaces the detection engine.
 ## Status
 
 Active build. Day 1 complete: project foundation + deterministic log generator.
+Day 2 in progress: deterministic detection layer (interface scaffolded; the
+rule engine + rules are the owner's implementation).
 
 ## Stack
 
