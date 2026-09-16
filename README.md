@@ -13,9 +13,10 @@ LLM never replaces the detection engine.
 
 ## Status
 
-Active build. Day 1 complete: project foundation + deterministic log generator.
-Day 2 in progress: deterministic detection layer (interface scaffolded; the
-rule engine + rules are the owner's implementation).
+Active build. Day 1: foundation + log generator. Day 2: deterministic
+detection layer (detection rate 100% on the eval harness). Day 3: alerts,
+incidents, report generator, simulation API, and the React dashboard
+foundation.
 
 ## Stack
 
@@ -42,6 +43,31 @@ uvicorn app.main:app --reload --app-dir backend
 # docs at http://127.0.0.1:8000/docs
 ```
 
+### Run the dashboard (Day 3+)
+
+```powershell
+cd frontend
+npm install        # first time only
+npm run dev        # http://127.0.0.1:5173  (proxies /alerts, /incidents, etc. to :8000)
+```
+
+One click of a **simulate** button triggers: generate logs -> detect -> alert
+-> incident -> dashboard refresh.
+
+### API
+
+| Endpoint                  | Purpose                                    |
+| ------------------------- | ------------------------------------------ |
+| `GET /health`             | liveness                                   |
+| `GET /alerts`             | alert feed (optional `severity`,`status`)  |
+| `GET /alerts/{id}`        | single alert                              |
+| `GET /incidents`          | incidents (optional `status`,`technique`) |
+| `GET /incidents/{id}`     | single incident                           |
+| `GET /incidents/{id}/report?format=json\|text` | incident report        |
+| `POST /simulate`          | run every scenario once                    |
+| `POST /simulate/{scenario}` | run one scenario end to end              |
+| `GET /metrics`            | live metrics from real stored state        |
+
 ### Generate logs
 
 ```powershell
@@ -58,26 +84,38 @@ logs (default seeds are stable per scenario).
 pytest
 ```
 
-## Structure (Day 1)
+## Structure (Day 1-3)
 
 ```
 backend/
   app/
-    main.py                 # FastAPI app
+    main.py                 # FastAPI app + routers
     config.py               # settings via .env (pydantic-settings)
     api/health.py           # GET /health
+    api/alerts.py           # GET /alerts, GET /alerts/{id}
+    api/incidents.py        # GET /incidents{,/{id}}, /incidents/{id}/report
+    api/simulate.py         # POST /simulate{,/{scenario}}
+    api/metrics.py          # GET /metrics
     models/security_log.py  # normalized SecurityLog schema
-  simulation/
-    log_generator.py        # deterministic simulated attack log generator
+    models/alert.py         # Alert + Severity + Status
+    models/incident.py      # Incident + AuditEntry (timeline)
+    models/incident_store.py # in-memory incident store
+    services/simulation_pipeline.py  # generate->detect->alert->incident
+  detection/                # deterministic rule engine + MITRE registry (Day 2)
+  alerts/alert_manager.py   # alert lifecycle + dedup (Day 3)
+  reports/report_generator.py # JSON + analyst-readable reports (Day 3)
+  simulation/log_generator.py # deterministic simulated log generator
   tests/                    # pytest suite
+frontend/
+  src/                      # React + TS + Recharts dashboard
 data/
   logs/                     # generated sample logs
 docs/
-  log-schema.md             # field reference + design decisions
+  log-schema.md             # SecurityLog reference
+  detection-rules.md        # detection layer design + contract
 ```
 
-Later phases add `detection/`, `alerts/`, `rag/`, `agent/`, `reports/`,
-`response/`, the React dashboard, Docker and CI.
+Later phases add `rag/`, `agent/`, `response/`, Docker, and CI.
 
 ## Safety
 
