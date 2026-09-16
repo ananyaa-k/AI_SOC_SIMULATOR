@@ -91,7 +91,7 @@ def get_rule_meta(rule_id: str) -> dict:
     """Return rule metadata for ``rule_id``; raises KeyError if unknown."""
     if rule_id not in RULES:
         raise KeyError(f"unknown rule id {rule_id!r}; known: {sorted(RULES)}")
-    return RULES[rule_id]
+    return {"rule_id": rule_id, **RULES[rule_id]}
 
 
 def expected_rule_for_scenario(scenario: str) -> str | None:

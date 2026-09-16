@@ -20,7 +20,7 @@ import pytest
 from simulation.log_generator import SCENARIOS, generate_scenario
 
 rule_engine = pytest.importorskip(
-    "rule_engine", reason="rule_engine.py not implemented yet (Day 2 core task)"
+    "detection.rule_engine", reason="rule_engine.py not implemented yet (Day 2 core task)"
 )
 detect = rule_engine.detect
 
