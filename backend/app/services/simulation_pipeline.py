@@ -1,10 +1,10 @@
-"""End-to-end simulation pipeline (Day 3 scope).
+"""End-to-end simulation pipeline (Day 3 + Day 4 RAG scope).
 
 Wires the deterministic chain for one scenario:
 
-    generate logs -> detect -> alert -> incident
+    generate logs -> detect -> alert -> [RAG retrieval] -> incident
 
-Later phases slot in between alert and incident (RAG Day 4, confidence Day 5,
+Later phases slot in between alert and incident (confidence Day 5,
 L1 agent + response Day 6) without changing this orchestration shape.
 
 Pipeline statistics accumulate across calls so /metrics (spec section 39) can
@@ -19,6 +19,7 @@ from app.models.alert import Alert
 from app.models.incident import Incident
 from alerts.alert_manager import AlertManager
 from detection.rule_engine import detect
+from rag.retriever import RetrievalConfig, build_query_text, get_vector_store, retrieve
 from simulation.log_generator import SCENARIOS, generate_scenario
 
 
@@ -38,13 +39,14 @@ class IndividualStats:
 
 
 def _incident_counter() -> int:
-    global _incident_seq
+    global _incident_seq, _rag_initialized
     _incident_seq += 1
     return _incident_seq
 
 
 _incident_seq = 0
 pipeline_stats = PipelineStats()
+_rag_initialized = False
 
 
 def reset_pipeline() -> None:
@@ -57,20 +59,31 @@ def reset_pipeline() -> None:
     pipeline_stats.incidents.clear()
 
 
+def initialize_rag() -> int:
+    """Load synthetic pairs and index into vector store; returns count indexed."""
+    from rag.playbooks import load_and_index
+    return load_and_index()
+
+
 def run_scenario(
     scenario: str,
     manager: AlertManager | None = None,
     seed: int | None = None,
+    rag_config: RetrievalConfig | None = None,
 ) -> dict:
-    """Run one full simulated scenario through the Day 3 pipeline.
+    """Run one full simulated scenario through the Day 4 pipeline.
 
     Returns a summary dict grouped per alert/incident so the API can return a
     compact payload while the stores keep the full objects.
     """
+    global _rag_initialized
     if scenario not in SCENARIOS:
         raise KeyError(f"unknown scenario {scenario!r}; choose from {sorted(SCENARIOS)}")
 
     manager = manager or _default_manager
+    if not _rag_initialized:
+        initialize_rag()
+        _rag_initialized = True
     logs = generate_scenario(scenario, seed=seed)
     detections = detect(logs)
 
@@ -88,6 +101,16 @@ def run_scenario(
             continue  # duplicate, already covered by an open alert
         alerts.append(alert)
         incident = Incident.from_alert(f"INC-{_incident_counter():04d}", alert)
+
+        # Day 4: RAG retrieval
+        if rag_config is None:
+            rag_config = RetrievalConfig()
+        retrieved = retrieve(alert, rag_config)
+        incident.historical_matches = [
+            {"similarity": r.similarity, "title": r.incident.title}
+            for r in retrieved
+        ]
+
         _default_incident_store.add(incident)
         incidents.append(incident)
 
