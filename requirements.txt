@@ -3,6 +3,11 @@ uvicorn[standard]>=0.30.0
 pydantic>=2.7.0
 pydantic-settings>=2.3.0
 
+# RAG (vector store + local embeddings)
+chromadb>=0.5.0
+sentence-transformers>=3.0.0
+numpy>=1.26.0
+
 # L1 agent (Day 6)
 langchain-core>=0.3.0
 langchain-groq>=0.2.0
