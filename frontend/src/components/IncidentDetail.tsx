@@ -6,8 +6,23 @@ interface Props {
   incident: Incident;
 }
 
+const RAG_STATUS_TEXT: Record<string, string> = {
+  ok: "Historical search returned matches.",
+  no_matches: "Historical search ran but found no similar incidents.",
+  unavailable: "Historical context unavailable (knowledge base not indexed).",
+  error: "Historical search failed.",
+};
+
+function detailOf(incident: Incident, event: string): Record<string, unknown> | null {
+  return incident.timeline.find((t) => t.event === event)?.detail ?? null;
+}
+
 export default function IncidentDetail({ incident }: Props) {
   const [report, setReport] = useState<string | null>(null);
+  const scored = detailOf(incident, "CONFIDENCE_SCORED");
+  const decision = detailOf(incident, "AGENT_DECISION");
+  const reasons = (scored?.reasons as string[] | undefined) ?? [];
+  const tripped = (decision?.guardrails_triggered as string[] | undefined) ?? [];
 
   useEffect(() => {
     setReport(null);
@@ -56,27 +71,42 @@ export default function IncidentDetail({ incident }: Props) {
 
       <section>
         <h4>Historical Matches / Confidence</h4>
-        {incident.historical_matches.length === 0 && (
-          <p className="muted">RAG not yet enabled (Day 4).</p>
-        )}
+        <p className="muted">
+          {incident.rag_status ? RAG_STATUS_TEXT[incident.rag_status] : "Not searched."}
+        </p>
         {incident.historical_matches.map((m, i) => (
           <p key={i} className="muted">
-            similarity {String(m.similarity)} · {String(m.title)}
+            similarity {Number(m.similarity).toFixed(2)} · {String(m.title)} (
+            {String(m.mitre_technique_id ?? "?")}, {String(m.severity ?? "?")})
           </p>
         ))}
         <p>
           Confidence:{" "}
           <strong>{incident.confidence === null ? "—" : incident.confidence.toFixed(2)}</strong>
         </p>
+        {reasons.length > 0 && (
+          <ul className="reasons muted">
+            {reasons.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section>
         <h4>Agent / Response</h4>
         <p className="muted">
-          Decision: {incident.agent_decision ?? "PENDING (Day 6)"}
-          {" · "}Response: {incident.response_action ?? "—"} (
+          Decision: {incident.agent_decision ?? "PENDING"}
+          {decision?.llm_decision ? ` (LLM proposed ${String(decision.llm_decision)})` : " (no LLM verdict)"}
+          {" · "}Simulated response: {incident.response_action ?? "—"} (
           {incident.response_status ?? "—"})
         </p>
+        {incident.recommended_response && (
+          <p className="muted">Recommended: {incident.recommended_response}</p>
+        )}
+        {tripped.length > 0 && (
+          <p className="muted">Guardrails triggered: {tripped.join(", ")}</p>
+        )}
         {incident.escalation_reason && (
           <p className="escalation">Escalation: {incident.escalation_reason}</p>
         )}

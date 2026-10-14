@@ -58,6 +58,8 @@ def generate_human_report(incident: Incident) -> str:
         "",
         "## RAG / Historical Context",
         "",
+        f"Search status: {incident.rag_status or 'n/a'}",
+        "",
     ]
     if incident.historical_matches:
         for i, match in enumerate(incident.historical_matches, start=1):
@@ -67,10 +69,14 @@ def generate_human_report(incident: Incident) -> str:
             )
     else:
         lines.append("No historical matches retrieved.")
+    lines.append("")
+    lines.append(
+        f"Confidence: {incident.confidence:.2f}" if incident.confidence is not None else "Confidence: n/a"
+    )
 
     lines += [
         "",
-        "## Agent Decision (Day 6)",
+        "## Agent Decision",
         "",
         f"- Decision: {incident.agent_decision or 'PENDING'}",
         f"- Recommended response: {incident.recommended_response or 'n/a'}",

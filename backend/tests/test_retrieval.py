@@ -16,7 +16,7 @@ from rag.schemas import IncidentResponsePair
 from rag.vector_store import VectorStore
 from rag.retriever import RetrievalConfig, retrieve
 
-# Map scenario -> expected synthetic incident_id (from our 5 seeds)
+# Map scenario -> expected synthetic incident_id in data/incidents/synthetic_pairs.jsonl
 EXPECTED_PAIR = {
     "brute_force": "SYN-0001",
     "malicious_ip": "SYN-0003",
@@ -28,10 +28,18 @@ EVAL_SEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 TOP_K = 3
 TARGET_ACCURACY = 0.90
 
+# Retrieval quality depends on the real embedding model (see conftest.py).
+pytestmark = pytest.mark.real_embeddings
+
 
 def test_vector_store_indexed() -> None:
-    store = VectorStore()
-    assert store.count() == 5, "expected 5 synthetic pairs indexed"
+    from app.services.simulation_pipeline import initialize_rag
+    from rag.playbooks import load_pairs
+
+    expected = len(load_pairs())
+    assert expected > 0, "historical incident dataset is missing or empty"
+    assert initialize_rag() == expected
+    assert VectorStore().count() == expected
 
 
 @pytest.mark.parametrize("scenario", sorted(EXPECTED_PAIR))

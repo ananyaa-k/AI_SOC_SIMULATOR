@@ -10,9 +10,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     """Application settings loaded from environment variables / .env.
 
-    Groq + vector-store settings are declared now so the config surface is
-    stable, but they are not used until later phases (RAG, L1 agent).
-    A Groq key is optional here; missing keys are handled at runtime by the
+    A Groq key is optional: without one the L1 agent runs without an LLM and
+    escalates every incident. Missing keys are handled at runtime by the
     calling service, never at import time.
     """
 
@@ -29,11 +28,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     data_dir: Path = PROJECT_ROOT / "data"
 
-    # --- LLM (used from Day 6 onward) ---
+    # --- LLM (L1 analyst agent) ---
     groq_api_key: str | None = None
     llm_model: str = "llama-3.3-70b-versatile"
 
-    # --- RAG (used from Day 4 onward) ---
+    # --- RAG (persistent ChromaDB directory) ---
     vector_store_path: Path = PROJECT_ROOT / "data" / "vectorstore"
 
 
