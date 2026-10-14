@@ -78,6 +78,17 @@ python -m simulation.log_generator --out ../data/logs/all.ndjson   # all scenari
 The generator is deterministic: the same `--seed` always produces identical
 logs (default seeds are stable per scenario).
 
+### L1 analyst (Day 6)
+
+`backend/agent/l1_analyst.py` reads each incident (evidence, RAG matches,
+confidence), asks Groq via LangChain for `AUTO_RESOLVE` or `ESCALATE` plus a
+recommended action from a fixed catalog of simulated responses, then applies
+deterministic guardrails. Any of these forces escalation: no `GROQ_API_KEY`,
+an LLM error or unparseable reply, confidence missing or below 0.85, CRITICAL
+severity, no historical match, or an action outside the catalog. Each decision
+lands in the incident timeline as `AGENT_DECISION`, `RESPONSE_ACTION`, then
+`INCIDENT_CLOSED` or `ESCALATED`. Responses are recorded, never executed.
+
 ### Run tests
 
 ```powershell
