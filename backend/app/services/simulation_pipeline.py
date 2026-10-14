@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 
 from app.models.alert import Alert
 from app.models.incident import Incident
+from agent.l1_analyst import L1Analyst, get_l1_analyst
 from alerts.alert_manager import AlertManager
 from detection.rule_engine import detect
 from rag.retriever import RetrievalConfig, build_query_text, get_vector_store, retrieve
@@ -70,6 +71,7 @@ def run_scenario(
     manager: AlertManager | None = None,
     seed: int | None = None,
     rag_config: RetrievalConfig | None = None,
+    analyst: L1Analyst | None = None,
 ) -> dict:
     """Run one full simulated scenario through the Day 4 pipeline.
 
@@ -107,9 +109,18 @@ def run_scenario(
             rag_config = RetrievalConfig()
         retrieved = retrieve(alert, rag_config)
         incident.historical_matches = [
-            {"similarity": r.similarity, "title": r.incident.title}
+            {
+                "similarity": r.similarity,
+                "title": r.incident.title,
+                "incident_id": r.incident.incident_id,
+                "mitre_technique_id": r.incident.mitre_technique_id,
+            }
             for r in retrieved
         ]
+
+        # Day 6: L1 agent decides auto-resolve vs escalate (simulated response)
+        (analyst or get_l1_analyst()).triage(incident)
+        alert.status = incident.status
 
         _default_incident_store.add(incident)
         incidents.append(incident)
@@ -129,6 +140,7 @@ def run_scenario(
         "incident_count": len(incidents),
         "alerts": [a.alert_id for a in alerts],
         "incidents": [i.incident_id for i in incidents],
+        "decisions": {i.incident_id: i.agent_decision for i in incidents},
     }
 
 

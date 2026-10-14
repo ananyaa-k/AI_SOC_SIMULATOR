@@ -111,14 +111,15 @@ class AlertManager:
         """Return an open alert already covering this detection, if any.
 
         Duplicate means: same rule fired on exactly the same triggering events
-        while a NEW/TRIAGED alert with that signature still exists. Once an
-        alert is resolved/closed the same evidence may legitimately re-fire.
+        while a NEW/TRIAGED/ESCALATED alert with that signature still exists
+        (escalated alerts are still open, waiting on a human). Once an alert
+        is resolved/closed the same evidence may legitimately re-fire.
         """
         sig = _evidence_signature(detection.evidence)
         for alert in self._alerts.values():
             if alert.rule_id != detection.rule_id:
                 continue
-            if alert.status not in (AlertStatus.NEW, AlertStatus.TRIAGED):
+            if alert.status not in (AlertStatus.NEW, AlertStatus.TRIAGED, AlertStatus.ESCALATED):
                 continue
             if _evidence_signature(alert.evidence) == sig:
                 return alert
