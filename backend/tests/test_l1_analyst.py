@@ -19,7 +19,8 @@ def make_incident(**overrides) -> Incident:
     base = dict(
         incident_id="INC-0001",
         alert_id="ALERT-0001",
-        severity=Severity.HIGH,
+        # MEDIUM: HIGH and CRITICAL always escalate, so the happy path needs MEDIUM.
+        severity=Severity.MEDIUM,
         title="Brute-Force Detection",
         description="Multiple auth failures.",
         affected_asset="10.0.0.5",
@@ -101,6 +102,9 @@ def test_llm_escalation_is_always_honored() -> None:
         ({"confidence": 0.5}, "confidence_below_threshold"),
         ({"confidence": None}, "confidence_missing"),
         ({"severity": Severity.CRITICAL}, "critical_severity"),
+        ({"severity": Severity.HIGH}, "high_severity"),
+        ({"rag_status": "unavailable"}, "rag_unavailable"),
+        ({"rag_status": "error"}, "rag_unavailable"),
         ({"historical_matches": []}, "no_historical_match"),
     ],
 )

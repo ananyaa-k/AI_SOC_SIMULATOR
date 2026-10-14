@@ -4,7 +4,7 @@ import IncidentDetail from "./components/IncidentDetail";
 import SeverityChart from "./components/SeverityChart";
 import StatCards from "./components/StatCards";
 import { api } from "./services/api";
-import type { Alert, Incident, Metrics } from "./types";
+import type { Alert, Health, Incident, Metrics } from "./types";
 
 const SCENARIOS = [
   "brute_force",
@@ -16,6 +16,7 @@ const SCENARIOS = [
 const EMPTY_METRICS: Metrics = {
   total_logs: 0,
   malicious_logs: 0,
+  detected_malicious_logs: 0,
   total_detections: 0,
   detection_rate: null,
   total_alerts: 0,
@@ -38,20 +39,23 @@ export default function App() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [metrics, setMetrics] = useState<Metrics>(EMPTY_METRICS);
+  const [health, setHealth] = useState<Health | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [alertList, incidentList, metricData] = await Promise.all([
+      const [alertList, incidentList, metricData, healthData] = await Promise.all([
         api.alerts(),
         api.incidents(),
         api.metrics(),
+        api.health(),
       ]);
       setAlerts(alertList);
       setIncidents(incidentList);
       setMetrics(metricData);
+      setHealth(healthData);
       setError(null);
     } catch (e) {
       setError(`Backend unreachable: ${e instanceof Error ? e.message : String(e)}`);
@@ -96,13 +100,25 @@ export default function App() {
               disabled={busy !== null}
               onClick={() => runScenario(s)}
             >
-              {busy === s ? "Running…" : s.replace("_", " ")}
+              {busy === s ? "Running…" : s.split("_").join(" ")}
             </button>
           ))}
         </div>
       </header>
 
       {error && <div className="banner error">{error}</div>}
+      {health && !health.llm_configured && (
+        <div className="banner warn">
+          No GROQ_API_KEY configured: the L1 agent runs without an LLM, so every
+          incident is escalated to a human analyst.
+        </div>
+      )}
+      {health?.rag.error && (
+        <div className="banner warn">
+          Historical context unavailable ({health.rag.error}). Incidents are
+          escalated with reason "rag_unavailable".
+        </div>
+      )}
 
       <main>
         <StatCards metrics={metrics} />

@@ -83,6 +83,18 @@ button:disabled {
   color: #fecdd3;
 }
 
+.banner.warn {
+  background: #3a2a0a;
+  border: 1px solid #eab308;
+  color: #fef3c7;
+}
+
+.reasons {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -238,6 +250,7 @@ section h4 {
 .timeline {
   padding-left: 18px;
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .escalation {
