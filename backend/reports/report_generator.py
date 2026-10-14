@@ -67,6 +67,10 @@ def generate_human_report(incident: Incident) -> str:
             )
     else:
         lines.append("No historical matches retrieved.")
+    lines.append("")
+    lines.append(
+        f"Confidence: {incident.confidence:.2f}" if incident.confidence is not None else "Confidence: n/a"
+    )
 
     lines += [
         "",

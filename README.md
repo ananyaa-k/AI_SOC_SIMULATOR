@@ -16,7 +16,9 @@ LLM never replaces the detection engine.
 Active build. Day 1: foundation + log generator. Day 2: deterministic
 detection layer (detection rate 100% on the eval harness). Day 3: alerts,
 incidents, report generator, simulation API, and the React dashboard
-foundation.
+foundation. Day 4: RAG knowledge base (ChromaDB). Day 5: deterministic
+confidence scoring from rule severity + RAG matches (`backend/triage/confidence.py`),
+logged to the audit timeline as `CONFIDENCE_SCORED`.
 
 ## Stack
 

@@ -1,11 +1,11 @@
-"""End-to-end simulation pipeline (Day 3 + Day 4 RAG scope).
+"""End-to-end simulation pipeline (Day 3 + Day 4 RAG + Day 5 confidence).
 
 Wires the deterministic chain for one scenario:
 
-    generate logs -> detect -> alert -> [RAG retrieval] -> incident
+    generate logs -> detect -> alert -> [RAG retrieval] -> [confidence] -> [L1 agent] -> incident
 
-Later phases slot in between alert and incident (confidence Day 5,
-L1 agent + response Day 6) without changing this orchestration shape.
+Confidence (Day 5) must be scored before the L1 agent (Day 6) runs: the
+agent escalates any incident with no confidence.
 
 Pipeline statistics accumulate across calls so /metrics (spec section 39) can
 report on real simulated data only -- never fabricated values.
@@ -14,14 +14,16 @@ report on real simulated data only -- never fabricated values.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 from app.models.alert import Alert
-from app.models.incident import Incident
+from app.models.incident import AuditEntry, Incident
 from agent.l1_analyst import L1Analyst, get_l1_analyst
 from alerts.alert_manager import AlertManager
 from detection.rule_engine import detect
 from rag.retriever import RetrievalConfig, build_query_text, get_vector_store, retrieve
 from simulation.log_generator import SCENARIOS, generate_scenario
+from triage.confidence import score_confidence
 
 
 @dataclass
@@ -110,13 +112,26 @@ def run_scenario(
         retrieved = retrieve(alert, rag_config)
         incident.historical_matches = [
             {
-                "similarity": r.similarity,
-                "title": r.incident.title,
                 "incident_id": r.incident.incident_id,
+                "title": r.incident.title,
+                "similarity": r.similarity,
                 "mitre_technique_id": r.incident.mitre_technique_id,
+                "severity": r.incident.severity,
             }
             for r in retrieved
         ]
+
+        # Day 5: confidence from rule severity + RAG matches
+        result = score_confidence(
+            alert.severity, alert.mitre_technique_id, incident.historical_matches
+        )
+        incident.confidence = result.score
+        alert.confidence = result.score
+        scored_at = datetime.now(timezone.utc)
+        incident.timeline.append(
+            AuditEntry(timestamp=scored_at, event="CONFIDENCE_SCORED", detail=result.audit_detail())
+        )
+        incident.updated_at = scored_at
 
         # Day 6: L1 agent decides auto-resolve vs escalate (simulated response)
         (analyst or get_l1_analyst()).triage(incident)
