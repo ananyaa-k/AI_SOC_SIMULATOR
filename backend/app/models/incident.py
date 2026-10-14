@@ -49,11 +49,13 @@ class Incident(BaseModel):
 
     evidence: list[SecurityLog] = Field(default_factory=list)
 
-    # RAG / confidence (Days 4-5)
+    # RAG / confidence
     historical_matches: list[dict[str, Any]] = Field(default_factory=list)
+    # ok | no_matches | unavailable | error (see app.services.simulation_pipeline)
+    rag_status: str | None = None
     confidence: float | None = None
 
-    # Agent + response (Day 6)
+    # Agent + response
     agent_decision: str | None = None  # AUTO_RESOLVE | ESCALATE
     recommended_response: str | None = None
     response_action: str | None = None

@@ -1,4 +1,4 @@
-"""AI L1 analyst (Day 6).
+"""AI L1 analyst.
 
 Reads an incident (alert data, evidence, RAG matches, confidence), asks a
 Groq-hosted LLM through LangChain whether it can be auto-resolved, and then
@@ -10,7 +10,8 @@ Guardrails (any one forces ESCALATE):
 
 * no LLM configured, the call failed, or the reply could not be parsed
 * confidence missing or below ``auto_resolve_threshold``
-* severity CRITICAL
+* severity HIGH or CRITICAL
+* the historical (RAG) search was unavailable or failed
 * no historical (RAG) matches to support the decision
 * the recommended action is not in the simulated action catalog
 
@@ -38,6 +39,9 @@ from app.models.incident import AuditEntry, Incident
 logger = logging.getLogger(__name__)
 
 DEFAULT_AUTO_RESOLVE_THRESHOLD = 0.85
+# A hung provider must not hang /simulate: bounded wait, at most one retry, then escalate.
+LLM_TIMEOUT_SECONDS = 20.0
+LLM_MAX_RETRIES = 1
 
 # Used when the LLM gives no usable recommendation: a sensible default the
 # human analyst can approve or change.
@@ -83,6 +87,7 @@ def build_incident_prompt(incident: Incident) -> str:
             "technique_id": incident.mitre_technique_id,
         },
         "confidence": incident.confidence,
+        "historical_search_status": incident.rag_status,
         "evidence_sample": evidence,
         "evidence_count": len(incident.evidence),
         "historical_matches": matches,
@@ -157,6 +162,10 @@ class L1Analyst:
             guardrails.append("confidence_below_threshold")
         if incident.severity == Severity.CRITICAL:
             guardrails.append("critical_severity")
+        elif incident.severity == Severity.HIGH:
+            guardrails.append("high_severity")
+        if incident.rag_status in ("unavailable", "error"):
+            guardrails.append("rag_unavailable")
         if not incident.historical_matches:
             guardrails.append("no_historical_match")
 
@@ -244,7 +253,13 @@ def build_default_llm(api_key: str | None, model: str) -> BaseChatModel | None:
     except ImportError:
         logger.warning("langchain-groq not installed; L1 agent will escalate everything")
         return None
-    return ChatGroq(model=model, api_key=api_key, temperature=0)
+    return ChatGroq(
+        model=model,
+        api_key=api_key,
+        temperature=0,
+        timeout=LLM_TIMEOUT_SECONDS,
+        max_retries=LLM_MAX_RETRIES,
+    )
 
 
 _default_analyst: L1Analyst | None = None

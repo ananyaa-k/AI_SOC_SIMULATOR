@@ -59,6 +59,7 @@ export interface Incident {
   mitre_technique_id: string | null;
   evidence: EvidenceLog[];
   historical_matches: Array<Record<string, unknown>>;
+  rag_status: "ok" | "no_matches" | "unavailable" | "error" | null;
   confidence: number | null;
   agent_decision: string | null;
   recommended_response: string | null;
@@ -73,6 +74,7 @@ export interface Incident {
 export interface Metrics {
   total_logs: number;
   malicious_logs: number;
+  detected_malicious_logs: number;
   total_detections: number;
   detection_rate: number | null;
   total_alerts: number;
@@ -85,6 +87,15 @@ export interface Metrics {
   escalated: number;
 }
 
+export interface Health {
+  status: string;
+  service: string;
+  version: string;
+  environment: string;
+  llm_configured: boolean;
+  rag: { ready: boolean; error: string | null };
+}
+
 export interface SimulateResult {
   scenario: string;
   log_count: number;
@@ -93,4 +104,5 @@ export interface SimulateResult {
   incident_count: number;
   alerts: string[];
   incidents: string[];
+  decisions: Record<string, string | null>;
 }

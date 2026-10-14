@@ -1,4 +1,4 @@
-import type { Alert, Incident, Metrics, SimulateResult } from "../types";
+import type { Alert, Health, Incident, Metrics, SimulateResult } from "../types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const resp = await fetch(path, init);
@@ -10,6 +10,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  health: () => request<Health>("/health"),
   alerts: () => request<Alert[]>("/alerts"),
   alert: (id: string) => request<Alert>(`/alerts/${id}`),
   incidents: () => request<Incident[]>("/incidents"),
